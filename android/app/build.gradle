@@ -9,6 +9,20 @@ react {
 def enableProguardInReleaseBuilds = false
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
+// Get security level from environment variable
+def securityLevel = System.getenv("SECURITY_LEVEL") ?: "none"
+
+// Map security levels to suffixes and app names (neutral naming for candidates)
+def securityConfig = [
+    "none":            [suffix: ".l0", appName: "VulnBank L0"],
+    "library":         [suffix: ".l1", appName: "VulnBank L1"],
+    "proxy-bypass":    [suffix: ".l2", appName: "VulnBank L2"],
+    "custom":          [suffix: ".l3", appName: "VulnBank L3"],
+    "frida-resistant": [suffix: ".l4", appName: "VulnBank L4"],
+]
+
+def config = securityConfig[securityLevel] ?: securityConfig["none"]
+
 android {
     ndkVersion rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
@@ -17,11 +31,14 @@ android {
     namespace "com.vulnerablebankapp"
 
     defaultConfig {
-        applicationId "com.vulnerablebankapp"
+        applicationId "com.vulnerablebankapp${config.suffix}"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+
+        // Set app name based on security level
+        resValue "string", "app_name", config.appName
     }
 
     signingConfigs {

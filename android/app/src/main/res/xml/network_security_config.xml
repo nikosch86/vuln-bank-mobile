@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Network Security Configuration for Production (L1 - Library)
+
+  L1 uses JS-level pinning only (react-native-ssl-pinning).
+  No native certificate pinning - makes it easier to bypass with Frida.
+  Cleartext traffic is disabled globally.
+
+  For native pinning, see L3/L4 security levels.
+-->
+<network-security-config>
+    <!-- Disable cleartext (HTTP) traffic globally -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

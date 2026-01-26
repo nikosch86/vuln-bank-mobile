@@ -1,5 +1,7 @@
-// API Base URL
-export const API_BASE = 'https://vulnbank.org';
+import { API_BASE as ENV_API_BASE } from '@env';
+
+// API Base URL - uses environment variable or defaults to production
+export const API_BASE = ENV_API_BASE || 'https://vulnbank.org';
 
 // API Endpoints
 export const ENDPOINTS = {

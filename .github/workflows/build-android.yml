@@ -6,23 +6,13 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  generate-certificates:
     runs-on: ubuntu-latest
-    container:
-      image: reactnativecommunity/react-native-android
-
-    strategy:
-      matrix:
-        security_level: [none, library, proxy-bypass, custom, frida-resistant]
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Generate certificate if missing
+      - name: Generate certificate and pins
         run: |
           if [ ! -f backend_certificates/cert.pem ]; then
             echo "No certificate found, generating self-signed certificate..."
@@ -50,14 +40,52 @@ jobs:
               -addext "subjectAltName=DNS:$HOST,IP:$HOST"
 
             echo "Certificate generated successfully"
-
-            # Update pins from the generated certificate
-            ./scripts/update-backend-pins.sh
           else
             echo "Certificate found at backend_certificates/cert.pem"
-            # Still run update-backend-pins.sh to ensure pins are current
-            ./scripts/update-backend-pins.sh
           fi
+
+          # Update pins from the certificate
+          ./scripts/update-backend-pins.sh
+
+      - name: Upload certificates and pins
+        uses: actions/upload-artifact@v4
+        with:
+          name: certificates-and-pins
+          path: |
+            backend_certificates/
+            .env
+            android/app/src/main/res/raw/
+            android/app/src/debug/res/raw/
+
+      - name: Upload backend certificates for download
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-certificates
+          path: |
+            backend_certificates/cert.pem
+            backend_certificates/key.pem
+
+  build:
+    runs-on: ubuntu-latest
+    needs: generate-certificates
+    container:
+      image: reactnativecommunity/react-native-android
+
+    strategy:
+      matrix:
+        security_level: [none, library, proxy-bypass, custom, frida-resistant]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download certificates and pins
+        uses: actions/download-artifact@v4
+        with:
+          name: certificates-and-pins
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Merge environment files
         run: cat .env .env.${{ matrix.security_level }} > .env.build
@@ -74,12 +102,3 @@ jobs:
         with:
           name: app-${{ matrix.security_level }}-release
           path: android/app/build/outputs/apk/release/app-release.apk
-
-      - name: Upload Backend Certificates
-        uses: actions/upload-artifact@v4
-        if: matrix.security_level == 'library'
-        with:
-          name: backend-certificates
-          path: |
-            backend_certificates/cert.pem
-            backend_certificates/key.pem

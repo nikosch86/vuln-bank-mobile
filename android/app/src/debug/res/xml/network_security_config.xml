@@ -1,25 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Network Security Configuration for Debug Builds (L1 - Library)
+  Network Security Configuration for Debug Builds
 
   This config allows:
-  - Localhost connections for Metro bundler
+  - Self-signed backend certificate trusted globally (any IP/domain)
   - User-installed certificates for debugging with proxies
+  - Cleartext for localhost/emulator IPs (Metro bundler)
 
-  L1 uses JS-level pinning only (react-native-ssl-pinning).
+  L1 uses JS-level pinning only (react-native-ssl-public-key-pinning).
   No native certificate pinning in debug builds.
 -->
 <network-security-config>
-    <!-- Allow cleartext for localhost (Metro bundler) -->
+    <!-- Trust self-signed cert and user certs globally -->
     <base-config cleartextTrafficPermitted="false">
         <trust-anchors>
             <certificates src="system" />
-            <!-- Allow user-installed certificates in debug builds -->
             <certificates src="user" />
+            <certificates src="@raw/backend_cert" />
         </trust-anchors>
     </base-config>
 
-    <!-- Allow localhost for Metro bundler -->
+    <!-- Allow cleartext for localhost/emulator (Metro bundler) -->
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="true">localhost</domain>
         <domain includeSubdomains="true">10.0.2.2</domain>

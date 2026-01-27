@@ -51,13 +51,6 @@ GRADLE_OPTS := --parallel \
 	-Dorg.gradle.configureondemand=true \
 	-Dkotlin.incremental=true
 
-# Docker run command with project mounted
-DOCKER_RUN = docker run --rm \
-	-v $(PROJECT_DIR):/app \
-	-w /app \
-	-e SECURITY_LEVEL=$(1) \
-	$(DOCKER_IMAGE)
-
 # Default target
 help:
 	@echo "VulnBank Mobile Build System"
@@ -126,6 +119,8 @@ build-android: $(OUTPUT_DIR)
 		echo "----------------------------------------"; \
 		echo "Building: $$level (release)"; \
 		echo "----------------------------------------"; \
+		echo "Merging .env + .env.$$level -> .env.build"; \
+		cat $(PROJECT_DIR)/.env $(PROJECT_DIR)/.env.$$level > $(PROJECT_DIR)/.env.build; \
 		docker run --rm \
 			-v $(PROJECT_DIR):/app \
 			-w /app \
@@ -163,6 +158,8 @@ build-debug: $(OUTPUT_DIR)
 		echo "----------------------------------------"; \
 		echo "Building: $$level (debug)"; \
 		echo "----------------------------------------"; \
+		echo "Merging .env + .env.$$level -> .env.build"; \
+		cat $(PROJECT_DIR)/.env $(PROJECT_DIR)/.env.$$level > $(PROJECT_DIR)/.env.build; \
 		docker run --rm \
 			-v $(PROJECT_DIR):/app \
 			-w /app \
@@ -188,12 +185,17 @@ build-debug: $(OUTPUT_DIR)
 
 # Clean build artifacts
 clean:
-	@echo "Cleaning build artifacts..."
+	@echo "Cleaning build artifacts and caches..."
 	docker run --rm \
-			-v $(PROJECT_DIR):/app \
-			-w /app \
-			$(DOCKER_IMAGE) \
-			sh -c "rm -rf $(OUTPUT_DIR) rm -rf $(PROJECT_DIR)/android/app/build rm -rf $(PROJECT_DIR)/android/.gradle rm -rf $(PROJECT_DIR)/node_modules/.cache"
+		-v $(PROJECT_DIR):/app \
+		-w /app \
+		$(DOCKER_IMAGE) \
+		sh -c "rm -rf /app/build-output && \
+			rm -rf /app/android/app/build && \
+			rm -rf /app/android/.gradle && \
+			rm -rf /app/node_modules/.cache && \
+			rm -rf /app/.env.build && \
+			rm -rf /app/.metro-health-check*"
 	@echo "Clean complete"
 
 # Clean everything including node_modules

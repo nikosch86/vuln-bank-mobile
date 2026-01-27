@@ -74,3 +74,12 @@ jobs:
         with:
           name: app-${{ matrix.security_level }}-release
           path: android/app/build/outputs/apk/release/app-release.apk
+
+      - name: Upload Backend Certificates
+        uses: actions/upload-artifact@v4
+        if: matrix.security_level == 'library'
+        with:
+          name: backend-certificates
+          path: |
+            backend_certificates/cert.pem
+            backend_certificates/key.pem

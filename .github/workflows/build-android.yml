@@ -22,6 +22,43 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Generate certificate if missing
+        run: |
+          if [ ! -f backend_certificates/cert.pem ]; then
+            echo "No certificate found, generating self-signed certificate..."
+
+            # Extract host from API_BASE in .env
+            API_BASE=$(grep "^API_BASE=" .env | cut -d'=' -f2)
+            # Remove protocol prefix (https:// or http://)
+            HOST=$(echo "$API_BASE" | sed -E 's|^https?://||' | sed -E 's|/.*||' | sed -E 's|:.*||')
+
+            if [ -z "$HOST" ]; then
+              echo "Error: Could not extract host from API_BASE"
+              exit 1
+            fi
+
+            echo "Generating self-signed certificate for host: $HOST"
+
+            mkdir -p backend_certificates
+
+            # Generate self-signed certificate
+            openssl req -x509 -newkey rsa:2048 -nodes \
+              -keyout backend_certificates/key.pem \
+              -out backend_certificates/cert.pem \
+              -days 365 \
+              -subj "/CN=$HOST" \
+              -addext "subjectAltName=DNS:$HOST,IP:$HOST"
+
+            echo "Certificate generated successfully"
+
+            # Update pins from the generated certificate
+            ./scripts/update-backend-pins.sh
+          else
+            echo "Certificate found at backend_certificates/cert.pem"
+            # Still run update-backend-pins.sh to ensure pins are current
+            ./scripts/update-backend-pins.sh
+          fi
+
       - name: Merge environment files
         run: cat .env .env.${{ matrix.security_level }} > .env.build
 

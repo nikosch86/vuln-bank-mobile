@@ -81,3 +81,7 @@ yarn-error.log
 
 # Generated merged env file (created by Makefile during build)
 .env.build
+
+# Build artifacts (created by Makefile)
+build-output/
+.gradle-cache/

@@ -37,6 +37,9 @@ SECURITY_LEVELS := none library proxy-bypass custom frida-resistant
 # Output directory for built APKs
 OUTPUT_DIR := $(PROJECT_DIR)/build-output
 
+# Gradle cache directory (persisted between builds)
+GRADLE_CACHE_DIR := $(PROJECT_DIR)/.gradle-cache
+
 # CPU/parallel build settings
 # Use all available cores, or set explicitly: make build-android JOBS=8
 JOBS ?= $(shell nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
@@ -90,6 +93,10 @@ help:
 $(OUTPUT_DIR):
 	mkdir -p $(OUTPUT_DIR)
 
+# Create gradle cache directory
+$(GRADLE_CACHE_DIR):
+	mkdir -p $(GRADLE_CACHE_DIR)
+
 # Build custom Docker image with pre-installed Android SDK
 docker-build:
 	@echo "Building custom Docker image with pre-installed SDK..."
@@ -108,80 +115,79 @@ install:
 		$(DOCKER_IMAGE) \
 		npm ci
 
-# Build release APKs for all security levels
-build-android: $(OUTPUT_DIR)
+# Build release APKs for all security levels (optimized: single container, one npm ci)
+build-android: $(OUTPUT_DIR) $(GRADLE_CACHE_DIR)
 	@echo "========================================"
 	@echo "Building ALL security levels (release)"
 	@echo "Using $(JOBS) parallel jobs"
 	@echo "========================================"
 	@echo ""
-	@for level in $(SECURITY_LEVELS); do \
-		echo "----------------------------------------"; \
-		echo "Building: $$level (release)"; \
-		echo "----------------------------------------"; \
-		echo "Merging .env + .env.$$level -> .env.build"; \
-		cat $(PROJECT_DIR)/.env $(PROJECT_DIR)/.env.$$level > $(PROJECT_DIR)/.env.build; \
-		docker run --rm \
-			-v $(PROJECT_DIR):/app \
-			-w /app \
-			-e SECURITY_LEVEL=$$level \
-			-e GRADLE_OPTS="-Dorg.gradle.workers.max=$(JOBS) -Xmx4g" \
-			$(DOCKER_IMAGE) \
-			sh -c "npm ci --prefer-offline 2>/dev/null || npm ci && \
-				cd android && \
+	docker run --rm \
+		-v $(PROJECT_DIR):/app \
+		-v $(GRADLE_CACHE_DIR):/root/.gradle \
+		-w /app \
+		-e GRADLE_OPTS="-Dorg.gradle.workers.max=$(JOBS) -Xmx4g" \
+		$(DOCKER_IMAGE) \
+		sh -c '\
+			echo "Installing dependencies (once)..." && \
+			npm ci --prefer-offline 2>/dev/null || npm ci && \
+			echo "" && \
+			for level in none library proxy-bypass custom frida-resistant; do \
+				echo "----------------------------------------"; \
+				echo "Building: $$level (release)"; \
+				echo "----------------------------------------"; \
+				cat /app/.env /app/.env.$$level > /app/.env.build && \
+				cd /app/android && \
 				SECURITY_LEVEL=$$level ./gradlew assembleRelease \
 					$(GRADLE_OPTS) \
-					--console=plain" || exit 1; \
-		echo "Copying APK..."; \
-		cp $(PROJECT_DIR)/android/app/build/outputs/apk/release/app-release.apk \
-			$(OUTPUT_DIR)/app-$$level-release.apk 2>/dev/null || \
-		cp $(PROJECT_DIR)/android/app/build/outputs/apk/release/*.apk \
-			$(OUTPUT_DIR)/app-$$level-release.apk 2>/dev/null || \
-			echo "Warning: Could not copy APK for $$level"; \
-		echo ""; \
-	done
-	@echo "========================================"
-	@echo "Build complete!"
-	@echo "========================================"
-	@echo ""
-	@echo "Output APKs:"
-	@ls -lh $(OUTPUT_DIR)/*.apk 2>/dev/null || echo "No APKs found"
+					--console=plain && \
+				mkdir -p /app/build-output && \
+				cp /app/android/app/build/outputs/apk/release/app-release.apk \
+					/app/build-output/app-$$level-release.apk && \
+				echo "Built: app-$$level-release.apk" && \
+				echo ""; \
+			done && \
+			echo "========================================" && \
+			echo "Build complete!" && \
+			echo "========================================" && \
+			ls -lh /app/build-output/*.apk'
 
-# Build debug APKs for all security levels
-build-debug: $(OUTPUT_DIR)
+# Build debug APKs for all security levels (optimized: single container, one npm ci)
+build-debug: $(OUTPUT_DIR) $(GRADLE_CACHE_DIR)
 	@echo "========================================"
 	@echo "Building ALL security levels (debug)"
 	@echo "Using $(JOBS) parallel jobs"
 	@echo "========================================"
 	@echo ""
-	@for level in $(SECURITY_LEVELS); do \
-		echo "----------------------------------------"; \
-		echo "Building: $$level (debug)"; \
-		echo "----------------------------------------"; \
-		echo "Merging .env + .env.$$level -> .env.build"; \
-		cat $(PROJECT_DIR)/.env $(PROJECT_DIR)/.env.$$level > $(PROJECT_DIR)/.env.build; \
-		docker run --rm \
-			-v $(PROJECT_DIR):/app \
-			-w /app \
-			-e SECURITY_LEVEL=$$level \
-			-e GRADLE_OPTS="-Dorg.gradle.workers.max=$(JOBS) -Xmx4g" \
-			$(DOCKER_IMAGE) \
-			sh -c "npm ci --prefer-offline 2>/dev/null || npm ci && \
-				cd android && \
+	docker run --rm \
+		-v $(PROJECT_DIR):/app \
+		-v $(GRADLE_CACHE_DIR):/root/.gradle \
+		-w /app \
+		-e GRADLE_OPTS="-Dorg.gradle.workers.max=$(JOBS) -Xmx4g" \
+		$(DOCKER_IMAGE) \
+		sh -c '\
+			echo "Installing dependencies (once)..." && \
+			npm ci --prefer-offline 2>/dev/null || npm ci && \
+			echo "" && \
+			for level in none library proxy-bypass custom frida-resistant; do \
+				echo "----------------------------------------"; \
+				echo "Building: $$level (debug)"; \
+				echo "----------------------------------------"; \
+				cat /app/.env /app/.env.$$level > /app/.env.build && \
+				cd /app/android && \
 				SECURITY_LEVEL=$$level ./gradlew assembleDebug \
 					$(GRADLE_OPTS) \
-					--console=plain" || exit 1; \
-		cp $(PROJECT_DIR)/android/app/build/outputs/apk/debug/app-debug.apk \
-			$(OUTPUT_DIR)/app-$$level-debug.apk 2>/dev/null || \
-			echo "Warning: Could not copy APK for $$level"; \
-		echo ""; \
-	done
-	@echo "========================================"
-	@echo "Build complete!"
-	@echo "========================================"
-	@echo ""
-	@echo "Output APKs:"
-	@ls -lh $(OUTPUT_DIR)/*.apk 2>/dev/null || echo "No APKs found"
+					--console=plain && \
+				mkdir -p /app/build-output && \
+				cp /app/android/app/build/outputs/apk/debug/app-debug.apk \
+					/app/build-output/app-$$level-debug.apk && \
+				echo "Built: app-$$level-debug.apk" && \
+				echo ""; \
+			done && \
+			echo "========================================" && \
+			echo "Build complete!" && \
+			echo "========================================" && \
+			ls -lh /app/build-output/*.apk'
 
 # Clean build artifacts
 clean:
@@ -198,10 +204,11 @@ clean:
 			rm -rf /app/.metro-health-check*"
 	@echo "Clean complete"
 
-# Clean everything including node_modules
+# Clean everything including node_modules and gradle cache
 clean-all: clean
-	@echo "Removing node_modules..."
+	@echo "Removing node_modules and gradle cache..."
 	rm -rf $(PROJECT_DIR)/node_modules
+	rm -rf $(GRADLE_CACHE_DIR)
 	@echo "Clean all complete"
 
 # Open shell in build container for debugging
@@ -209,6 +216,7 @@ shell:
 	@echo "Opening shell in build container..."
 	docker run --rm -it \
 		-v $(PROJECT_DIR):/app \
+		-v $(GRADLE_CACHE_DIR):/root/.gradle \
 		-w /app \
 		$(DOCKER_IMAGE) \
 		/bin/bash
@@ -240,6 +248,7 @@ info:
 	fi
 	@echo "  Project dir:     $(PROJECT_DIR)"
 	@echo "  Output dir:      $(OUTPUT_DIR)"
+	@echo "  Gradle cache:    $(GRADLE_CACHE_DIR)"
 	@echo "  Security levels: $(SECURITY_LEVELS)"
 	@echo "  Parallel jobs:   $(JOBS)"
 	@echo ""

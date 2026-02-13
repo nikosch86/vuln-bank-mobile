@@ -32,7 +32,8 @@ DOCKER_IMAGE := $(shell docker images -q $(DOCKER_IMAGE_CUSTOM) 2>/dev/null | gr
 PROJECT_DIR := $(shell pwd)
 
 # All security levels to build
-SECURITY_LEVELS := l00 none library proxy-bypass custom frida-resistant
+# SECURITY_LEVELS := l00 none library proxy-bypass custom frida-resistant
+SECURITY_LEVELS := l00 none library
 
 # Output directory for built APKs
 OUTPUT_DIR := $(PROJECT_DIR)/build-output

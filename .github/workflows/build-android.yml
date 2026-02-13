@@ -114,7 +114,7 @@ jobs:
         run: |
           # for level in l00 none library proxy-bypass custom frida-resistant; do
           # Only build what's actually done
-          for level in l00 none library; do
+          for level in l00 none library custom; do
             echo "========================================"
             echo "Building: $level (release)"
             echo "========================================"

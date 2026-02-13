@@ -29,6 +29,15 @@ jobs:
 
             echo "Generating self-signed certificate for host: $HOST"
 
+            # Determine if HOST is an IP address or FQDN # TODO: Support IPv6
+            if echo "$HOST" | grep -qE '^([0-9]{1,3}\.){3}[0-9]{1,3}$'; then
+              SAN="IP:$HOST"
+              echo "Detected IP address: $HOST"
+            else
+              SAN="DNS:$HOST"
+              echo "Detected FQDN: $HOST"
+            fi
+
             mkdir -p backend_certificates
 
             # Generate self-signed certificate
@@ -37,7 +46,7 @@ jobs:
               -out backend_certificates/cert.pem \
               -days 365 \
               -subj "/CN=$HOST" \
-              -addext "subjectAltName=DNS:$HOST,IP:$HOST"
+              -addext "subjectAltName=$SAN"
 
             echo "Certificate generated successfully"
           else

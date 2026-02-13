@@ -6,8 +6,77 @@ on:
   workflow_dispatch:
 
 jobs:
+  generate-certificates:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate certificate and pins
+        run: |
+          if [ ! -f backend_certificates/cert.pem ]; then
+            echo "No certificate found, generating self-signed certificate..."
+
+            # Extract host from API_BASE in .env
+            API_BASE=$(grep "^API_BASE=" .env | cut -d'=' -f2)
+            # Remove protocol prefix (https:// or http://)
+            HOST=$(echo "$API_BASE" | sed -E 's|^https?://||' | sed -E 's|/.*||' | sed -E 's|:.*||')
+
+            if [ -z "$HOST" ]; then
+              echo "Error: Could not extract host from API_BASE"
+              exit 1
+            fi
+
+            echo "Generating self-signed certificate for host: $HOST"
+
+            # Determine if HOST is an IP address or FQDN # TODO: Support IPv6
+            if echo "$HOST" | grep -qE '^([0-9]{1,3}\.){3}[0-9]{1,3}$'; then
+              SAN="IP:$HOST"
+              echo "Detected IP address: $HOST"
+            else
+              SAN="DNS:$HOST"
+              echo "Detected FQDN: $HOST"
+            fi
+
+            mkdir -p backend_certificates
+
+            # Generate self-signed certificate
+            openssl req -x509 -newkey rsa:2048 -nodes \
+              -keyout backend_certificates/key.pem \
+              -out backend_certificates/cert.pem \
+              -days 365 \
+              -subj "/CN=$HOST" \
+              -addext "subjectAltName=$SAN"
+
+            echo "Certificate generated successfully"
+          else
+            echo "Certificate found at backend_certificates/cert.pem"
+          fi
+
+          # Update pins from the certificate
+          ./scripts/update-backend-pins.sh
+
+      - name: Upload certificates and pins
+        uses: actions/upload-artifact@v4
+        with:
+          name: certificates-and-pins
+          path: |
+            backend_certificates/
+            .env
+            android/app/src/main/res/raw/
+            android/app/src/debug/res/raw/
+
+      - name: Upload backend certificates for download
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-certificates
+          path: |
+            backend_certificates/cert.pem
+            backend_certificates/key.pem
+
   build:
     runs-on: ubuntu-latest
+    needs: generate-certificates
     container:
       image: reactnativecommunity/react-native-android
 
@@ -15,22 +84,110 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Download certificates and pins
+        uses: actions/download-artifact@v4
+        with:
+          name: certificates-and-pins
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-
+
+      - name: Cache node modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            node-modules-
+
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --prefer-offline 2>/dev/null || npm ci
 
-      - name: Build Android APK and AAB
-        run: npx react-native build-android --tasks assembleDebug,assembleRelease
+      - name: Build all security levels
+        run: |
+          # for level in l00 none library proxy-bypass custom frida-resistant; do
+          # Only build what's actually done
+          for level in l00 none library; do
+            echo "========================================"
+            echo "Building: $level (release)"
+            echo "========================================"
 
-      - name: Upload Release APK
-        if: github.ref == 'refs/heads/main'
+            cat .env .env.$level > .env.build
+            TRUST_USER_CERTS=$(grep "^TRUST_USER_CERTS=" .env.build | cut -d= -f2)
+
+            rm -rf android/app/build/generated/assets/createBundle*JsAndAssets
+            rm -rf android/app/build/generated/res/networkSecurity
+            rm -rf android/app/build/intermediates/assets/release
+            rm -rf android/app/build/intermediates/res/merged/release
+
+            cd android
+            SECURITY_LEVEL=$level TRUST_USER_CERTS=$TRUST_USER_CERTS ./gradlew assembleRelease \
+              --parallel \
+              --daemon \
+              --build-cache \
+              -Dorg.gradle.parallel=true \
+              -Dorg.gradle.caching=true \
+              -Dorg.gradle.configureondemand=true \
+              -Dkotlin.incremental=true \
+              --console=plain
+            cd ..
+
+            mkdir -p build-output
+            cp android/app/build/outputs/apk/release/app-release.apk \
+              build-output/app-$level-release.apk
+
+            echo "Built: app-$level-release.apk"
+            echo ""
+          done
+
+          echo "All builds complete!"
+          ls -lh build-output/
+
+      - name: Upload all APKs
         uses: actions/upload-artifact@v4
         with:
-          name: app-release-apk
-          path: android/app/build/outputs/apk/release/app-release.apk
+          name: all-apks
+          path: build-output/*.apk
 
-      - name: Upload Debug AAB
-        if: github.ref == 'refs/heads/main'
+      - name: Upload l00 APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug-aab
-          path: android/app/build/outputs/bundle/debug/app-debug.aab
+          name: app-l00-release
+          path: build-output/app-l00-release.apk
+
+      - name: Upload none APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-none-release
+          path: build-output/app-none-release.apk
+
+      - name: Upload library APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-library-release
+          path: build-output/app-library-release.apk
+
+      - name: Upload proxy-bypass APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-proxy-bypass-release
+          path: build-output/app-proxy-bypass-release.apk
+
+      - name: Upload custom APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-custom-release
+          path: build-output/app-custom-release.apk
+
+      - name: Upload frida-resistant APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-frida-resistant-release
+          path: build-output/app-frida-resistant-release.apk

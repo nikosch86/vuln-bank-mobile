@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+build-output/
+android/app/build/
+android/.gradle/
+ios/build/
+ios/Pods/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test coverage
+coverage/

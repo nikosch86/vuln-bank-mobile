@@ -1,7 +1,14 @@
 import { API_BASE as ENV_API_BASE } from '@env';
+import { secureFetch, isSecurityError } from '../security/httpClient';
 
 // API Base URL - uses environment variable or defaults to production
 export const API_BASE = ENV_API_BASE || 'https://vulnbank.org';
+
+// Debug: Log API configuration on module load
+console.log('[API] Configuration:', {
+  API_BASE,
+  ENV_API_BASE: ENV_API_BASE || '(not set, using default)',
+});
 
 // API Endpoints
 export const ENDPOINTS = {
@@ -30,7 +37,7 @@ export const ENDPOINTS = {
     deleteAccount: (userId: number | string) => `/admin/delete_account/${userId}`,
     approveLoan: (loanId: number | string) => `/admin/approve_loan/${loanId}`,
     pendingLoans: '/api/bill-categories',  // Placeholder -
-      
+
   },
   // Placeholders for missing endpoints that might be needed
   profile: {
@@ -47,12 +54,12 @@ export const ENDPOINTS = {
  * Make API request with proper error handling
  */
 export const apiRequest = async (
-  endpoint: string, 
+  endpoint: string,
   options: RequestOptions = {}
 ): Promise<any> => {
-  const { 
-    method = 'GET', 
-    token = null, 
+  const {
+    method = 'GET',
+    token = null,
     body = null,
     headers: customHeaders = {}
   } = options;
@@ -81,24 +88,36 @@ export const apiRequest = async (
 
     // Add body if provided
     if (body) {
-      requestOptions.body = body instanceof FormData 
-        ? body 
+      requestOptions.body = body instanceof FormData
+        ? body
         : JSON.stringify(body);
     }
 
-    // Make the fetch request
-    const response = await fetch(`${API_BASE}${endpoint}`, requestOptions);
-    
+    // Make the fetch request using security-level appropriate client
+    const response = await secureFetch(`${API_BASE}${endpoint}`, requestOptions);
+
     // Parse the JSON response
     const data = await response.json();
-    
+
     // Return both response status and data
     return {
       ok: response.ok,
       status: response.status,
       data,
     };
-  } catch (error) {
+  } catch (error: any) {
+    // Check for certificate pinning failures
+    if (isSecurityError(error)) {
+      return {
+        ok: false,
+        status: 0,
+        data: {
+          message: 'Security error: Connection not trusted',
+          error: 'CERTIFICATE_PINNING_FAILED',
+        },
+      };
+    }
+
     return {
       ok: false,
       status: 0,
@@ -116,14 +135,14 @@ export interface RequestOptions {
 }
 
 // Helper functions for common request types
-export const get = (endpoint: string, token?: string | null) => 
+export const get = (endpoint: string, token?: string | null) =>
   apiRequest(endpoint, { token });
 
-export const post = (endpoint: string, body: any, token?: string | null) => 
+export const post = (endpoint: string, body: any, token?: string | null) =>
   apiRequest(endpoint, { method: 'POST', body, token });
 
-export const put = (endpoint: string, body: any, token?: string | null) => 
+export const put = (endpoint: string, body: any, token?: string | null) =>
   apiRequest(endpoint, { method: 'PUT', body, token });
 
-export const del = (endpoint: string, token?: string | null) => 
+export const del = (endpoint: string, token?: string | null) =>
   apiRequest(endpoint, { method: 'DELETE', token });

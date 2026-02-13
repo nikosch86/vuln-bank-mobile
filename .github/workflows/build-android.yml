@@ -103,15 +103,21 @@ jobs:
 
       - name: Build all security levels
         run: |
-          for level in none library proxy-bypass custom frida-resistant; do
+          for level in l00 none library proxy-bypass custom frida-resistant; do
             echo "========================================"
             echo "Building: $level (release)"
             echo "========================================"
 
             cat .env .env.$level > .env.build
+            TRUST_USER_CERTS=$(grep "^TRUST_USER_CERTS=" .env.build | cut -d= -f2)
+
+            rm -rf android/app/build/generated/assets/createBundle*JsAndAssets
+            rm -rf android/app/build/generated/res/networkSecurity
+            rm -rf android/app/build/intermediates/assets/release
+            rm -rf android/app/build/intermediates/res/merged/release
 
             cd android
-            SECURITY_LEVEL=$level ./gradlew assembleRelease \
+            SECURITY_LEVEL=$level TRUST_USER_CERTS=$TRUST_USER_CERTS ./gradlew assembleRelease \
               --parallel \
               --daemon \
               --build-cache \
@@ -139,7 +145,13 @@ jobs:
           name: all-apks
           path: build-output/*.apk
 
-      - name: Upload individual APKs
+      - name: Upload l00 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-l00-release
+          path: build-output/app-l00-release.apk
+
+      - name: Upload none APK
         uses: actions/upload-artifact@v4
         with:
           name: app-none-release

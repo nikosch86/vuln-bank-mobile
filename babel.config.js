@@ -9,7 +9,7 @@
 // while level-specific flags remain in separate files.
 
 const securityLevel = process.env.SECURITY_LEVEL || 'library';
-const validLevels = ['none', 'library', 'proxy-bypass', 'custom', 'frida-resistant'];
+const validLevels = ['l00', 'none', 'library', 'proxy-bypass', 'custom', 'frida-resistant'];
 
 // Validate security level
 if (!validLevels.includes(securityLevel)) {

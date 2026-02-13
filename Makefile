@@ -32,7 +32,7 @@ DOCKER_IMAGE := $(shell docker images -q $(DOCKER_IMAGE_CUSTOM) 2>/dev/null | gr
 PROJECT_DIR := $(shell pwd)
 
 # All security levels to build
-SECURITY_LEVELS := none library proxy-bypass custom frida-resistant
+SECURITY_LEVELS := l00 none library proxy-bypass custom frida-resistant
 
 # Output directory for built APKs
 OUTPUT_DIR := $(PROJECT_DIR)/build-output
@@ -132,13 +132,18 @@ build-android: $(OUTPUT_DIR) $(GRADLE_CACHE_DIR)
 			echo "Installing dependencies (once)..." && \
 			npm ci --prefer-offline 2>/dev/null || npm ci && \
 			echo "" && \
-			for level in none library proxy-bypass custom frida-resistant; do \
+			for level in $(SECURITY_LEVELS); do \
 				echo "----------------------------------------"; \
 				echo "Building: $$level (release)"; \
 				echo "----------------------------------------"; \
 				cat /app/.env /app/.env.$$level > /app/.env.build && \
+				trust_user=$$(grep "^TRUST_USER_CERTS=" /app/.env.build | cut -d= -f2) && \
+				rm -rf /app/android/app/build/generated/assets/createBundle*JsAndAssets && \
+				rm -rf /app/android/app/build/generated/res/networkSecurity && \
+				rm -rf /app/android/app/build/intermediates/assets/release && \
+				rm -rf /app/android/app/build/intermediates/res/merged/release && \
 				cd /app/android && \
-				SECURITY_LEVEL=$$level ./gradlew assembleRelease \
+				SECURITY_LEVEL=$$level TRUST_USER_CERTS=$$trust_user ./gradlew assembleRelease \
 					$(GRADLE_OPTS) \
 					--console=plain && \
 				mkdir -p /app/build-output && \
@@ -169,13 +174,18 @@ build-debug: $(OUTPUT_DIR) $(GRADLE_CACHE_DIR)
 			echo "Installing dependencies (once)..." && \
 			npm ci --prefer-offline 2>/dev/null || npm ci && \
 			echo "" && \
-			for level in none library proxy-bypass custom frida-resistant; do \
+			for level in $(SECURITY_LEVELS); do \
 				echo "----------------------------------------"; \
 				echo "Building: $$level (debug)"; \
 				echo "----------------------------------------"; \
 				cat /app/.env /app/.env.$$level > /app/.env.build && \
+				trust_user=$$(grep "^TRUST_USER_CERTS=" /app/.env.build | cut -d= -f2) && \
+				rm -rf /app/android/app/build/generated/assets/createBundle*JsAndAssets && \
+				rm -rf /app/android/app/build/generated/res/networkSecurity && \
+				rm -rf /app/android/app/build/intermediates/assets/debug && \
+				rm -rf /app/android/app/build/intermediates/res/merged/debug && \
 				cd /app/android && \
-				SECURITY_LEVEL=$$level ./gradlew assembleDebug \
+				SECURITY_LEVEL=$$level TRUST_USER_CERTS=$$trust_user ./gradlew assembleDebug \
 					$(GRADLE_OPTS) \
 					--console=plain && \
 				mkdir -p /app/build-output && \

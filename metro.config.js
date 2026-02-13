@@ -9,6 +9,7 @@ console.log(`[Metro] Building with SECURITY_LEVEL=${securityLevel}`);
 
 // Map security levels to their implementation directories
 const securityLevelMap = {
+  'l00': 'none',              // Same as none, but trusts user-installed CAs
   'none': 'none',
   'library': 'library',
   'proxy-bypass': 'library',  // Uses library base + additional modules
@@ -25,6 +26,7 @@ const getExclusions = (level) => {
   const exclusions = [];
 
   const levelExclusions = {
+    'l00': ['library', 'proxy-bypass', 'custom', 'frida-resistant'],
     'none': ['library', 'proxy-bypass', 'custom', 'frida-resistant'],
     'library': ['proxy-bypass', 'custom', 'frida-resistant'],
     'proxy-bypass': ['custom', 'frida-resistant'],

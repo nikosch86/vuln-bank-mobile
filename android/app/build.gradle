@@ -14,14 +14,52 @@ def securityLevel = System.getenv("SECURITY_LEVEL") ?: "none"
 
 // Map security levels to suffixes and app names (neutral naming for candidates)
 def securityConfig = [
-    "none":            [suffix: ".l0", appName: "VulnBank L0"],
-    "library":         [suffix: ".l1", appName: "VulnBank L1"],
-    "proxy-bypass":    [suffix: ".l2", appName: "VulnBank L2"],
-    "custom":          [suffix: ".l3", appName: "VulnBank L3"],
-    "frida-resistant": [suffix: ".l4", appName: "VulnBank L4"],
+    "l00":             [suffix: ".l00", appName: "VulnBank L00"],
+    "none":            [suffix: ".l0",  appName: "VulnBank L0"],
+    "library":         [suffix: ".l1",  appName: "VulnBank L1"],
+    "proxy-bypass":    [suffix: ".l2",  appName: "VulnBank L2"],
+    "custom":          [suffix: ".l3",  appName: "VulnBank L3"],
+    "frida-resistant": [suffix: ".l4",  appName: "VulnBank L4"],
 ]
 
 def config = securityConfig[securityLevel] ?: securityConfig["none"]
+
+// Generate network_security_config.xml based on TRUST_USER_CERTS env variable
+// When true: trusts user-installed certificates (interceptable with Burp Suite)
+// When false: trusts only system + backend certificate
+def generatedResDir = file("${buildDir}/generated/res/networkSecurity")
+def trustUserCerts = System.getenv("TRUST_USER_CERTS") == "true"
+
+task generateNetworkSecurityConfig {
+    def outputDir = file("${generatedResDir}/xml")
+    inputs.property("trustUserCerts", trustUserCerts)
+    outputs.dir outputDir
+    doLast {
+        outputDir.mkdirs()
+        def userCertLine = trustUserCerts ? '\n            <certificates src="user" />' : ''
+        def xmlContent = """\
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Auto-generated network security config for security level: ${securityLevel}
+  ${trustUserCerts ? 'Trusts user-installed certificates (e.g. Burp Suite CA)' : 'Only trusts system and backend certificates'}
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />${userCertLine}
+            <certificates src="@raw/backend_cert" />
+        </trust-anchors>
+    </base-config>
+
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">10.0.2.2</domain>
+        <domain includeSubdomains="true">10.0.3.2</domain>
+    </domain-config>
+</network-security-config>
+"""
+        new File(outputDir, "network_security_config.xml").text = xmlContent
+    }
+}
 
 android {
     ndkVersion rootProject.ext.ndkVersion
@@ -29,6 +67,13 @@ android {
     compileSdk rootProject.ext.compileSdkVersion
 
     namespace "com.vulnerablebankapp"
+
+    // Include generated network security config
+    sourceSets {
+        main {
+            res.srcDirs += generatedResDir
+        }
+    }
 
     defaultConfig {
         applicationId "com.vulnerablebankapp${config.suffix}"
@@ -59,6 +104,13 @@ android {
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
+    }
+}
+
+// Wire the generation task before any task that consumes resources
+tasks.configureEach { task ->
+    if (task.name.contains('Resources') || task.name.contains('SourceSetPaths')) {
+        task.dependsOn generateNetworkSecurityConfig
     }
 }
 

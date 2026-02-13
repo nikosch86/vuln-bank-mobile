@@ -43,7 +43,8 @@ const headersToObject = (headers: Headers): Record<string, string> => {
 
 /**
  * Get SPKI pin hashes from environment
- * Note: TrustKit (iOS) requires at least 2 pins
+ * Note: TrustKit (iOS) requires at least 2 pins.
+ * Both pins can be identical on Android — the library accepts duplicates.
  */
 const getSSLPins = (): string[] => {
   const pins: string[] = [];
@@ -52,7 +53,7 @@ const getSSLPins = (): string[] => {
     pins.push(SSL_PIN_HASH_1);
   }
 
-  if (SSL_PIN_HASH_2 && SSL_PIN_HASH_2 !== SSL_PIN_HASH_1) {
+  if (SSL_PIN_HASH_2) {
     pins.push(SSL_PIN_HASH_2);
   }
 

@@ -14,12 +14,12 @@ def securityLevel = System.getenv("SECURITY_LEVEL") ?: "none"
 
 // Map security levels to suffixes and app names (neutral naming for candidates)
 def securityConfig = [
-    "l00":             [suffix: ".l00", appName: "VulnBank L00"],
-    "none":            [suffix: ".l0",  appName: "VulnBank L0"],
-    "library":         [suffix: ".l1",  appName: "VulnBank L1"],
-    "proxy-bypass":    [suffix: ".l2",  appName: "VulnBank L2"],
-    "custom":          [suffix: ".l3",  appName: "VulnBank L3"],
-    "frida-resistant": [suffix: ".l4",  appName: "VulnBank L4"],
+    "l00":             [suffix: ".l00", appName: "FailBank L00"],
+    "none":            [suffix: ".l0",  appName: "FailBank L0"],
+    "library":         [suffix: ".l1",  appName: "FailBank L1"],
+    "proxy-bypass":    [suffix: ".l2",  appName: "FailBank L2"],
+    "custom":          [suffix: ".l3",  appName: "FailBank L3"],
+    "frida-resistant": [suffix: ".l4",  appName: "FailBank L4"],
 ]
 
 def config = securityConfig[securityLevel] ?: securityConfig["none"]
@@ -66,7 +66,7 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace "com.vulnerablebankapp"
+    namespace "com.failbankapp"
 
     // Include generated network security config
     sourceSets {
@@ -76,7 +76,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.vulnerablebankapp${config.suffix}"
+        applicationId "com.failbankapp${config.suffix}"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

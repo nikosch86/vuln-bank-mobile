@@ -16,15 +16,15 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onNavigate }) => {
     <View style={styles.container}>
       <View style={styles.logoContainer}>
         <Text style={styles.logoText}>🏦</Text>
-        <Text style={styles.appName}>Vulnerable Bank</Text>
+        <Text style={styles.appName}>FailBank</Text>
       </View>
-      
+
       <Text style={styles.tagline}>
-        Banking Made Simple & InSecure
+        Banking Made Simple & Affordable
       </Text>
-      
+
       <Text style={styles.description}>
-      This is an Intentionally vulnerable application, designed for everyone to practice application security.
+      Your trusted partner in digital banking. Fast transfers, easy loans, and virtual cards at your fingertips.
       </Text>
       
       <View style={styles.buttonContainer}>

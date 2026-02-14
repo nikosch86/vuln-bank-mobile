@@ -1,4 +1,4 @@
-package com.vulnerablebankapp.network
+package com.failbankapp.network
 
 import android.util.Base64
 import com.facebook.react.bridge.Promise

@@ -1,4 +1,4 @@
-package com.vulnerablebankapp;
+package com.failbankapp;
 
 public class Secrets {
 

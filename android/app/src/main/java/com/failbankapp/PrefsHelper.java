@@ -1,11 +1,11 @@
-package com.vulnerablebankapp;
+package com.failbankapp;
 
 import android.content.Context;
 import android.content.SharedPreferences;
 
 public class PrefsHelper {
 
-    private static final String PREFS_NAME = "VulnBankPrefs";
+    private static final String PREFS_NAME = "FailBankPrefs";
 
     public static void storeSecrets(Context context) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);

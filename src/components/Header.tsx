@@ -13,7 +13,7 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ 
-  title = 'Vulnerable Bank', 
+  title = 'FailBank',
   onBackPress, 
   onMenuPress 
 }) => {

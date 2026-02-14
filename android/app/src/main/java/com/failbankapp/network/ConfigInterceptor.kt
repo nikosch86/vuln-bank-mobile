@@ -1,4 +1,4 @@
-package com.vulnerablebankapp.network
+package com.failbankapp.network
 
 import okhttp3.Interceptor
 import okhttp3.Response

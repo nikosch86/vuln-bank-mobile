@@ -1,4 +1,4 @@
-package com.vulnerablebankapp.network
+package com.failbankapp.network
 
 import com.facebook.react.ReactPackage
 import com.facebook.react.bridge.NativeModule

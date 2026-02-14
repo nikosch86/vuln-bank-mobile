@@ -47,7 +47,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onNavigate }) => {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Create Account</Text>
-      <Text style={styles.subtitle}>Sign up to get started with Vulnerable Bank</Text>
+      <Text style={styles.subtitle}>Sign up to get started with FailBank</Text>
       
       <View style={styles.form}>
         <View style={styles.inputContainer}>

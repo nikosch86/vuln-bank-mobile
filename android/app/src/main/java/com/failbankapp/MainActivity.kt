@@ -1,4 +1,4 @@
-package com.vulnerablebankapp
+package com.failbankapp
 
 import android.os.Bundle
 import android.util.Log
@@ -11,7 +11,7 @@ import com.facebook.react.defaults.DefaultReactActivityDelegate
 
 class MainActivity : ReactActivity() {
 
-  override fun getMainComponentName(): String = "VulnerableBankApp"
+  override fun getMainComponentName(): String = "FailBankApp"
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -20,7 +20,7 @@ class MainActivity : ReactActivity() {
     Log.d("Secrets", Secrets.HARDCODED_ADMIN_JWT)
 
     // Store plaintext secrets in SharedPreferences
-    val prefs = getSharedPreferences("VulnBankPrefs", Context.MODE_PRIVATE)
+    val prefs = getSharedPreferences("FailBankPrefs", Context.MODE_PRIVATE)
     val editor = prefs.edit()
     editor.putString("username", "admin")
     editor.putString("password", "admin123")

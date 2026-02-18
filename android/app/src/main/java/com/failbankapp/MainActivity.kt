@@ -19,11 +19,9 @@ class MainActivity : ReactActivity() {
     // Log the hardcoded JWT
     Log.d("Secrets", Secrets.HARDCODED_ADMIN_JWT)
 
-    // Store plaintext secrets in SharedPreferences
+    // Store secrets in SharedPreferences
     val prefs = getSharedPreferences("FailBankPrefs", Context.MODE_PRIVATE)
     val editor = prefs.edit()
-    editor.putString("username", "admin")
-    editor.putString("password", "admin123")
     editor.putString("balance", "$999999")
     editor.putString("debug_flag", "FLAG{HardcodedSecretsAreBad}")
     editor.apply()

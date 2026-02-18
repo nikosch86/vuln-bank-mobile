@@ -2,7 +2,7 @@
  * Frida bypass script for VulnBank L3 (custom) SSL pinning
  *
  * Usage:
- *   frida -U -f com.vulnerablebankapp.l3 -l frida-bypass-custom.js
+ *   frida -U -f com.failbankapp.l3 -l frida-bypass-custom.js
  *
  * Architecture overview:
  *   The L3 build has three validation layers:
@@ -58,7 +58,7 @@ function bypassApproachA() {
 
         // Layer 1: Bypass ConfigInterceptor — skip SPKI check, just forward
         var ConfigInterceptor = Java.use(
-            "com.vulnerablebankapp.network.ConfigInterceptor"
+            "com.failbankapp.network.ConfigInterceptor"
         );
         ConfigInterceptor.intercept.implementation = function (chain) {
             console.log("[*] ConfigInterceptor bypassed: " + chain.request().url());
@@ -70,7 +70,7 @@ function bypassApproachA() {
         //   - Native 50ms threshold (skipped entirely since we replace the method)
         //   - JS 30ms threshold (Date.now() sees ~100ms elapsed)
         var DataSyncManager = Java.use(
-            "com.vulnerablebankapp.network.DataSyncManager"
+            "com.failbankapp.network.DataSyncManager"
         );
         DataSyncManager.ensureConfigSync.implementation = function (
             domain,
@@ -101,7 +101,7 @@ function bypassApproachB() {
         var expectedHash = null;
 
         var DataSyncManager = Java.use(
-            "com.vulnerablebankapp.network.DataSyncManager"
+            "com.failbankapp.network.DataSyncManager"
         );
 
         // Intercept ensureConfigSync just to capture the pinHash argument
@@ -127,7 +127,7 @@ function bypassApproachB() {
 
         // Patch computeSpkiHash in ConfigInterceptor to return the pinned hash
         var ConfigInterceptor = Java.use(
-            "com.vulnerablebankapp.network.ConfigInterceptor"
+            "com.failbankapp.network.ConfigInterceptor"
         );
 
         // Read the pinnedHash field from the interceptor instance
